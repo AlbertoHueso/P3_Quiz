@@ -150,10 +150,38 @@ exports.editCmd = (rl, id) => {
  * @param rl Objeto readline usado para implementar el CLI.
  * @param id Clave del quiz a probar.
  */
-exports.testCmd = (rl, id) => {
-    log('Probar el quiz indicado.', 'red');
-    rl.prompt();
-};
+exports.testCmd = async (rl, id) => {
+   			
+   			try {
+
+   				//Waiting for the result of the promise checkAnswer				
+   				let _correct= await checkAnswer(rl,id);
+   				
+            	if (_correct){
+            		console.log("Su respuesta es correcta");
+                    biglog("Correcta",'green');
+                    rl.prompt();
+            	}
+            	else {
+                console.log("Su respuesta es incorrecta");
+                    biglog("Incorrecta",'red');
+                    rl.prompt();
+            	}
+        
+  			}
+    		catch (error) {
+
+    		//We show error message
+    		if (error.message)
+            errorlog(error.message);
+
+        	//we show error from a throw
+        	else errorlog(error);
+            rl.prompt();
+	}	
+	
+
+}
 
 
 /**
@@ -162,9 +190,77 @@ exports.testCmd = (rl, id) => {
  *
  * @param rl Objeto readline usado para implementar el CLI.
  */
-exports.playCmd = rl => {
-    log('Jugar.', 'red');
+exports.playCmd = async rl => {
+
+    let score=0;
+    //Questions to be resolved
+    let toBeResolved=[];
+
+   
+    
+    //We fill the array with the questions indexes to be resolved
+    model.getAll().forEach((quiz, id) => {
+        toBeResolved.push(id);
+        
+    });
+
+
+
+
+
+    if (!(toBeResolved.length>=1)){
+    	 errorlog(`No hay preguntas para resolver`);
+    	 rl.prompt();
+    }
+    else {
+
+    	while (toBeResolved.length>=1){
+    		
+    		//Contains the index of the question to ask in the model
+    		let _id=_randNumber(toBeResolved.length);
+
+    		//Contains the index where _id is stored in toBeResolved
+    		let _index=toBeResolved[_id];
+
+    		//We remove the value from the toBeResolved array
+    		toBeResolved.splice(_id,1);
+
+    		try {
+	    		//We await and check the answer 
+	    		let _correct= await checkAnswer(rl,_index);
+	    		
+	    		if (_correct){	
+	    			score++;
+	    			console.log(`CORRECTO -	Lleva ${score} aciertos.`)
+	    			if (toBeResolved.length===0){
+	    				console.log("No hay nada más que preguntar.");
+	    				console.log(`Fin del juego.	Aciertos: ${score}`);
+	    				biglog(score,'magenta');
+	    			}
+    			}else{
+    				console.log(`INCORRECTO\nFin del juego.	Aciertos:	${score}`);
+    				biglog(score,'magenta');
+    				rl.prompt();
+
+    				//We break the while 
+    				break;
+    			}	
+
+    		}
+    		catch (error) {
+	            errorlog(error.message);
+	            rl.prompt();
+        } 
+        
+    	}
+
+    }
+    
+
+    
     rl.prompt();
+
+    
 };
 
 
@@ -175,8 +271,8 @@ exports.playCmd = rl => {
  */
 exports.creditsCmd = rl => {
     log('Autores de la práctica:');
-    log('Nombre 1', 'green');
-    log('Nombre 2', 'green');
+    log('Alberto', 'green');
+    log('Hueso', 'green');
     rl.prompt();
 };
 
@@ -190,3 +286,62 @@ exports.quitCmd = rl => {
     rl.close();
 };
 
+
+
+
+/**
+Función que retorna un entero aleatorio entre 0 y max (no incluido)
+@param max Número límite entre el que se calculan los enteros
+   		
+@returns  {number} entero entre 0 y max	(no incluido este último)	
+
+*/
+ const _randNumber =(max) =>{
+    	_number= Math.floor(Math.random()*max);
+    	return _number;
+    }
+
+
+/**
+*Función que retorna una promesa
+*La promesa resuelve true si la respuesta es correcta, false en caso contrario
+*Arroja una excepción si el @param id no está definido
+*@param rl Objeto readline usado para implementar el CLI.
+*@param id Clave del quiz a probar.
+*@returns {Promise} Promesa
+*/
+const checkAnswer = (rl, id) => {
+
+	return new Promise(function(resolve, reject) {
+
+					 if (typeof id === "undefined") {
+			       
+			        throw(`Falta el parámetro id.`);
+			        
+			    } else {
+
+			    	
+			            const quiz = model.getByIndex(id);
+
+			            rl.question(colorize(`${quiz.question}?`, 'red'), answer => {
+
+			            	answer=answer.toLowerCase().trim();
+			            	
+			            	if (answer===quiz.answer.toLowerCase().trim()){
+			            		resolve (true);
+			            	}
+			            	else {
+			            		
+			                resolve (false);
+			            	}
+			    
+			    		});
+			    		
+			    	
+			    	
+				};
+	});
+    
+   
+
+}
