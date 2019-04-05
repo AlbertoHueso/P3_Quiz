@@ -57,17 +57,23 @@ exports.listCmd = rl => {
  * @param id Clave del quiz a mostrar.
  */
 exports.showCmd = (rl, id) => {
-    if (typeof id === "undefined") {
-        errorlog(`Falta el parámetro id.`);
-    } else {
-        try {
-            const quiz = model.getByIndex(id);
-            log(` [${colorize(id, 'magenta')}]:  ${quiz.question} ${colorize('=>', 'magenta')} ${quiz.answer}`);
-        } catch(error) {
-            errorlog(error.message);
-        }
-    }
-    rl.prompt();
+    validateId(id)
+
+    .then (id => models.quiz.findByPk(id))
+    .then(quiz => {
+
+    	if (!quiz){
+    		throw new Error (`No existe un quiz asociado al id=${id}`);
+    		}
+    		log(` [${colorize(quiz.id, 'magenta')}]:  ${quiz.question} ${colorize('=>', 'magenta')} ${quiz.answer}`);
+    	})
+    
+    .catch(error =>{
+    	errorlog(error.message);
+    })
+    .then(()=>{
+    	rl.prompt();
+    });
 };
 
 
@@ -356,3 +362,20 @@ const checkAnswer = (rl, id) => {
    
 
 }
+
+const validateId = id =>{
+	 
+	return new Promise ((resolve, reject) =>{
+		 if (typeof id === "undefined"){
+		 	reject(new Error (`Falta el parámetro <id>.`))
+		 }else{
+		 	id=parseInt(id);//Se convierte en número, en la parte entera
+		 	if (Number.isNaN(id)){
+		 		reject(new Error (`El valor del parámetro <id> no es un número.`))
+		 	}else{
+		 		resolve(id);
+		 	}
+		 }
+	});
+	 
+};
