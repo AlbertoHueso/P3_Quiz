@@ -103,7 +103,7 @@ exports.addCmd = rl => {
             .catch (Sequelize.ValidationError,error =>{
             	errorlog('El quiz es erroneo');
             	error.errors.forEach (({message}) => errorlog(message));
-
+            	rl.prompt();
             })
             .catch(error =>{
     		errorlog(error.message);
@@ -152,32 +152,42 @@ exports.deleteCmd = (rl, id) => {
  * @param id Clave del quiz a editar en el modelo.
  */
 exports.editCmd = (rl, id) => {
-    if (typeof id === "undefined") {
-        errorlog(`Falta el parámetro id.`);
-        rl.prompt();
-    } else {
-        try {
-            const quiz = model.getByIndex(id);
+validateId(id)
 
-            process.stdout.isTTY && setTimeout(() => {rl.write(quiz.question)},0);
+    .then (id => models.quiz.findByPk(id))
+    .then(quiz => {
 
-            rl.question(colorize(' Introduzca una pregunta: ', 'red'), question => {
+    	if (!quiz){
+    		throw new Error (`No existe un quiz asociado al id=${id}`);
+    		}
+    		rl.question(colorize(' Introduzca una pregunta: ', 'red'), q => {
+    			rl.question(colorize(' Introduzca la respuesta ', 'red'), a => {
 
-                process.stdout.isTTY && setTimeout(() => {rl.write(quiz.answer)},0);
+            quiz.update({ question: q.trim(), answer: a.trim()})
 
-                rl.question(colorize(' Introduzca la respuesta ', 'red'), answer => {
-                    model.update(id, question, answer);
-                    log(` Se ha cambiado el quiz ${colorize(id, 'magenta')} por: ${question} ${colorize('=>', 'magenta')} ${answer}`);
-                    rl.prompt();
-                });
-            });
-        } catch (error) {
-            errorlog(error.message);
-            rl.prompt();
-        }
-    }
+            .then (() =>{
+            	log(` Se ha cambiado el quiz ${colorize(id, 'magenta')} por: ${q} ${colorize('=>', 'magenta')} ${a}`);
+            	rl.prompt();
+            })
+            .catch (Sequelize.ValidationError,error =>{
+            	errorlog('El quiz es erroneo');
+            	error.errors.forEach (({message}) => errorlog(message));
+            	rl.prompt();
+            })
+            
+        });
+    		})
+    	})
+    
+    .catch(error =>{
+    	errorlog(error.message);
+    })
+    .then(()=>{
+    	rl.prompt();
+    });
 };
 
+                   // log(` Se ha cambiado el quiz ${colorize(id, 'magenta')} por: ${question} ${colorize('=>', 'magenta')} ${answer}`);
 
 /**
  * Prueba un quiz, es decir, hace una pregunta del modelo a la que debemos contestar.
