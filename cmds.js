@@ -120,16 +120,23 @@ exports.addCmd = rl => {
  * @param id Clave del quiz a borrar en el modelo.
  */
 exports.deleteCmd = (rl, id) => {
-    if (typeof id === "undefined") {
-        errorlog(`Falta el parámetro id.`);
-    } else {
-        try {
-            model.deleteByIndex(id);
-        } catch(error) {
-            errorlog(error.message);
-        }
-    }
-    rl.prompt();
+    validateId(id)
+
+    .then (id => models.quiz.findByPk(id))
+    .then(quiz => {
+
+    	if (!quiz){
+    		throw new Error (`No existe un quiz asociado al id=${id}`);
+    		}
+    		models.quiz.destroy({where: {id} });
+    	})
+    
+    .catch(error =>{
+    	errorlog(error.message);
+    })
+    .then(()=>{
+    	rl.prompt();
+    });
 };
 
 
