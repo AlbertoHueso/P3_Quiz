@@ -103,7 +103,6 @@ exports.addCmd = rl => {
             .catch (Sequelize.ValidationError,error =>{
             	errorlog('El quiz es erroneo');
             	error.errors.forEach (({message}) => errorlog(message));
-            	rl.prompt();
             })
             .catch(error =>{
     		errorlog(error.message);
@@ -195,13 +194,14 @@ validateId(id)
  * @param rl Objeto readline usado para implementar el CLI.
  * @param id Clave del quiz a probar.
  */
-exports.testCmd = async (rl, id) => {
+exports.testCmd = (rl, id) => {
    			
-   			try {
+   			
 
    				//Waiting for the result of the promise checkAnswer				
-   				let _correct= await checkAnswer(rl,id);
-   				
+   				checkAnswer(rl,id)
+
+   				.then(_correct =>{
             	if (_correct){
             		console.log("Su respuesta es correcta");
                     biglog("Correcta",'green');
@@ -212,21 +212,19 @@ exports.testCmd = async (rl, id) => {
                     biglog("Incorrecta",'red');
                     rl.prompt();
             	}
-        
-  			}
-    		catch (error) {
+        		})
+  			
+  			  .catch(error =>{
+    			errorlog(error.message);
+    			rl.prompt();
+    		})
+    		
 
-    		//We show error message
-    		if (error.message)
-            errorlog(error.message);
-
-        	//we show error from a throw
-        	else errorlog(error);
-            rl.prompt();
+    		
 	}	
 	
 
-}
+
 
 
 /**
@@ -359,16 +357,14 @@ const checkAnswer = (rl, id) => {
 
 	return new Promise(function(resolve, reject) {
 
-					 if (typeof id === "undefined") {
-			       
-			        throw(`Falta el parámetro id.`);
-			        
-			    } else {
+				validateId(id)
 
-			    	
-			            const quiz = model.getByIndex(id);
-
-			            rl.question(colorize(`${quiz.question}?`, 'red'), answer => {
+			    .then (id => models.quiz.findByPk(id))
+    			.then(quiz => {
+    					if (!quiz){
+    					throw new Error (`No existe un quiz asociado al id=${id}`);
+    					}
+    					rl.question(colorize(`${quiz.question}?`, 'red'), answer => {
 
 			            	answer=answer.toLowerCase().trim();
 			            	
@@ -381,10 +377,15 @@ const checkAnswer = (rl, id) => {
 			            	}
 			    
 			    		});
-			    		
-			    	
-			    	
-				};
+
+
+
+    				})
+    				.catch(error =>{
+    				errorlog(error.message);
+    				rl.prompt();
+    				});     
+	
 	});
     
    
