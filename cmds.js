@@ -233,22 +233,74 @@ exports.testCmd = (rl, id) => {
  *
  * @param rl Objeto readline usado para implementar el CLI.
  */
-exports.playCmd = async rl => {
+exports.playCmd =  rl => {
 
     let score=0;
     //Questions to be resolved
     let toBeResolved=[];
 
    
-    
-    //We fill the array with the questions indexes to be resolved
-    model.getAll().forEach((quiz, id) => {
-        toBeResolved.push(id);
+    models.quiz.findAll()
+
+    .each(quiz =>{
+    	console.log(quiz.id);
+    	toBeResolved.push(quiz.id);
+    })
+   .then (() => {
+   	 if (!(toBeResolved.length>=1)){
+    	 errorlog(`No hay preguntas para resolver`);
+    	 rl.prompt();
+    }
+    else {
+
+    	
+    		
+    		//Contains the index of the question to ask in the model
+    		let _id=_randNumber(toBeResolved.length);
+
+    		//Contains the index where _id is stored in toBeResolved
+    		let _index=toBeResolved[_id];
+
+    		//We remove the value from the toBeResolved array
+    		toBeResolved.splice(_id,1);
+
+    		console.log(toBeResolved);
+	    		//We await and check the answer 
+	    		checkAnswer(rl,_index)
+
+	    		.then(_correct =>{
+	    		
+	    		if (_correct){	
+	    			score++;
+	    			console.log(`CORRECTO -	Lleva ${score} aciertos.`)
+	    			if (toBeResolved.length===0){
+	    				console.log("No hay nada más que preguntar.");
+	    				console.log(`Fin del juego.	Aciertos: ${score}`);
+	    				biglog(score,'magenta');
+	    				
+	    			}
+	    			rl.prompt();
+    			}else{
+    				console.log(`INCORRECTO\nFin del juego.	Aciertos:	${score}`);
+    				biglog(score,'magenta');
+    				rl.prompt();
+
+    				
+    			}	
+    		})
+    		
+    		.catch(error =>{
+	            errorlog(error.message);
+	            rl.prompt();
+        } );
         
-    });
+    	
+    }
+    rl.prompt();
+   })
 
 
-
+/*
 
 
     if (!(toBeResolved.length>=1)){
@@ -268,9 +320,11 @@ exports.playCmd = async rl => {
     		//We remove the value from the toBeResolved array
     		toBeResolved.splice(_id,1);
 
-    		try {
+    		
 	    		//We await and check the answer 
-	    		let _correct= await checkAnswer(rl,_index);
+	    		checkAnswer(rl,_index)
+
+	    		.then(_correct =>{
 	    		
 	    		if (_correct){	
 	    			score++;
@@ -285,15 +339,14 @@ exports.playCmd = async rl => {
     				biglog(score,'magenta');
     				rl.prompt();
 
-    				//We break the while 
-    				break;
+    				reject();
     			}	
-
-    		}
-    		catch (error) {
+    		})
+    		
+    		.catch(error =>{
 	            errorlog(error.message);
 	            rl.prompt();
-        } 
+        } );
         
     	}
 
@@ -302,7 +355,7 @@ exports.playCmd = async rl => {
 
     
     rl.prompt();
-
+*/
     
 };
 
