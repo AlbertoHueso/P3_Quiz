@@ -3,7 +3,7 @@
 const {log, biglog, errorlog, colorize} = require("./out");
 
 const {models} = require('./model');
-
+const Sequelize = require('sequelize');
 
 /**
  * Muestra la ayuda.
@@ -90,13 +90,24 @@ exports.showCmd = (rl, id) => {
  */
 exports.addCmd = rl => {
 
-    rl.question(colorize(' Introduzca una pregunta: ', 'red'), question => {
+    rl.question(colorize(' Introduzca una pregunta: ', 'red'), q => {
+    	
+        rl.question(colorize(' Introduzca la respuesta ', 'red'), a => {
 
-        rl.question(colorize(' Introduzca la respuesta ', 'red'), answer => {
+            models.quiz.create({ question: q.trim(), answer: a.trim()})
 
-            model.add(question, answer);
-            log(` ${colorize('Se ha añadido', 'magenta')}: ${question} ${colorize('=>', 'magenta')} ${answer}`);
-            rl.prompt();
+            .then (() =>{
+            	log(` ${colorize('Se ha añadido', 'magenta')}: ${q} ${colorize('=>', 'magenta')} ${a}`);
+            	rl.prompt();
+            })
+            .catch (Sequelize.ValidationError,error =>{
+            	errorlog('El quiz es erroneo');
+            	error.errors.forEach (({message}) => errorlog(message));
+
+            })
+            .catch(error =>{
+    		errorlog(error.message);
+    })
         });
     });
 };
