@@ -186,7 +186,6 @@ validateId(id)
     });
 };
 
-                   // log(` Se ha cambiado el quiz ${colorize(id, 'magenta')} por: ${question} ${colorize('=>', 'magenta')} ${answer}`);
 
 /**
  * Prueba un quiz, es decir, hace una pregunta del modelo a la que debemos contestar.
@@ -198,9 +197,10 @@ exports.testCmd = (rl, id) => {
    			
    			
 
-   				//Waiting for the result of the promise checkAnswer				
+   				//Call to checkAnswer			
    				checkAnswer(rl,id)
 
+   				//When the Promise finalizes returns _correct value
    				.then(_correct =>{
             	if (_correct){
             		console.log("Su respuesta es correcta");
@@ -236,127 +236,87 @@ exports.testCmd = (rl, id) => {
 exports.playCmd =  rl => {
 
     let score=0;
-    //Questions to be resolved
+    //Questions ids to be resolved
     let toBeResolved=[];
 
-   
+   //Obtaining all quizzes
     models.quiz.findAll()
 
+    //For each of them we add to the toBeResolved array the id
     .each(quiz =>{
-    	console.log(quiz.id);
+    	
     	toBeResolved.push(quiz.id);
     })
+
    .then (() => {
    	 if (!(toBeResolved.length>=1)){
     	 errorlog(`No hay preguntas para resolver`);
     	 rl.prompt();
     }
     else {
-
-    	
+    		//Playing this question
+    		playAnswer();
     		
-    		//Contains the index of the question to ask in the model
-    		let _id=_randNumber(toBeResolved.length);
-
-    		//Contains the index where _id is stored in toBeResolved
-    		let _index=toBeResolved[_id];
-
-    		//We remove the value from the toBeResolved array
-    		toBeResolved.splice(_id,1);
-
-    		console.log(toBeResolved);
-	    		//We await and check the answer 
-	    		checkAnswer(rl,_index)
-
-	    		.then(_correct =>{
-	    		
-	    		if (_correct){	
-	    			score++;
-	    			console.log(`CORRECTO -	Lleva ${score} aciertos.`)
-	    			if (toBeResolved.length===0){
-	    				console.log("No hay nada más que preguntar.");
-	    				console.log(`Fin del juego.	Aciertos: ${score}`);
-	    				biglog(score,'magenta');
-	    				
-	    			}
-	    			rl.prompt();
-    			}else{
-    				console.log(`INCORRECTO\nFin del juego.	Aciertos:	${score}`);
-    				biglog(score,'magenta');
-    				rl.prompt();
-
-    				
-    			}	
-    		})
     		
-    		.catch(error =>{
-	            errorlog(error.message);
-	            rl.prompt();
-        } );
         
     	
     }
     rl.prompt();
    })
-
-
-/*
-
-
-    if (!(toBeResolved.length>=1)){
-    	 errorlog(`No hay preguntas para resolver`);
-    	 rl.prompt();
-    }
-    else {
-
-    	while (toBeResolved.length>=1){
-    		
-    		//Contains the index of the question to ask in the model
-    		let _id=_randNumber(toBeResolved.length);
-
-    		//Contains the index where _id is stored in toBeResolved
-    		let _index=toBeResolved[_id];
-
-    		//We remove the value from the toBeResolved array
-    		toBeResolved.splice(_id,1);
-
-    		
-	    		//We await and check the answer 
-	    		checkAnswer(rl,_index)
-
-	    		.then(_correct =>{
-	    		
-	    		if (_correct){	
-	    			score++;
-	    			console.log(`CORRECTO -	Lleva ${score} aciertos.`)
-	    			if (toBeResolved.length===0){
-	    				console.log("No hay nada más que preguntar.");
-	    				console.log(`Fin del juego.	Aciertos: ${score}`);
-	    				biglog(score,'magenta');
-	    			}
-    			}else{
-    				console.log(`INCORRECTO\nFin del juego.	Aciertos:	${score}`);
-    				biglog(score,'magenta');
-    				rl.prompt();
-
-    				reject();
-    			}	
-    		})
-    		
-    		.catch(error =>{
+   .catch(error =>{
 	            errorlog(error.message);
 	            rl.prompt();
         } );
-        
-    	}
 
-    }
-    
+   			/**
+   			Shows a random question and checks if the answer is correct
+   			If it is correct adds a point to the score, show it, and asks another question
+			If it is wrong finalizes the game and shows the final score
+			It works recursively
+   			*/
+		   	playAnswer= () =>{
 
-    
-    rl.prompt();
-*/
-    
+		   	//Contains the index of the question to ask in the model
+		    		let _id=_randNumber(toBeResolved.length);
+
+		    		//Contains the index where _id is stored in toBeResolved
+		    		let _index=toBeResolved[_id];
+
+		    		//We remove the value from the toBeResolved array
+		    		toBeResolved.splice(_id,1);
+
+		    		
+			    		//We await and check the answer 
+			    		checkAnswer(rl,_index)
+
+			    		.then(_correct =>{
+			    		
+			    		if (_correct){	
+			    			score++;
+			    			console.log(`CORRECTO -	Lleva ${score} aciertos.`)
+			    			if (toBeResolved.length===0){
+			    				console.log("No hay nada más que preguntar.");
+			    				console.log(`Fin del juego.	Aciertos: ${score}`);
+			    				biglog(score,'magenta');
+			    				
+			    			}
+			    			else {
+			    				playAnswer();
+			    			}
+			    			rl.prompt();
+		    			}else{
+		    				console.log(`INCORRECTO\nFin del juego.	Aciertos:	${score}`);
+		    				biglog(score,'magenta');
+		    				rl.prompt();
+
+		    				
+		    			}	
+		    		})
+		    		
+		    		
+		   }
+
+   
 };
 
 
@@ -444,7 +404,13 @@ const checkAnswer = (rl, id) => {
    
 
 }
+/**
+Función que comprueba si un id es correcto
 
+@param id
+@returns {Promise} Si ides indefinido o no es un número muestra sendos mensajes de error y rechaza la promesa
+Si es un número resuelve la promesa y retorna el valor de id
+*/
 const validateId = id =>{
 	 
 	return new Promise ((resolve, reject) =>{
@@ -461,3 +427,5 @@ const validateId = id =>{
 	});
 	 
 };
+
+
